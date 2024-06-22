@@ -1,0 +1,25 @@
+{
+  "projects": [
+    {
+      "packageName": "backend",
+      "projectFolder": "packages/backend",
+      "reviewCategory": "packages",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "frontend",
+      "projectFolder": "packages/frontend",
+      "reviewCategory": "packages",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "types",
+      "projectFolder": "packages/types",
+      "reviewCategory": "packages",
+      "shouldPublish": true
+    }
+  ],
+  "pnpmOptions": {
+    "strictPeerDependencies": true
+  }
+}

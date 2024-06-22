@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "openapi-typescript": "^7.0.0",
+    "openapi-typescript-codegen": "^0.29.0",
+    "typescript": "^5.5.2"
+  },
+  "scripts": {
+    "build": "openapi-typescript openapi.yaml --output ./server/api.ts && openapi --input openapi.yaml --output ./client/ --client axios"
+  }
+}
