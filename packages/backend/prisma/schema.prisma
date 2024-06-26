@@ -1,0 +1,145 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  user_id             Int             @id @default(autoincrement())
+  username            String          @unique @db.VarChar(50)
+  email               String          @unique @db.VarChar(100)
+  password_hash       String          @db.VarChar(255)
+  first_name          String?         @db.VarChar(50)
+  last_name           String?         @db.VarChar(50)
+  bio                 String?         @db.Text
+  profile_picture_url String?         @db.VarChar(255)
+  social_links        Json?
+  address             String?         @db.VarChar(255)
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @updatedAt
+  events              Event[]         @relation("UserEvents")
+  participants        Participant[]
+  notifications       Notification[]
+  userOperations      UserOperation[]
+
+  @@index([username], name: "idx_username")
+  @@index([email], name: "idx_email")
+}
+
+model Event {
+  event_id       Int             @id @default(autoincrement())
+  user_id        Int
+  name           String          @unique @db.VarChar(100)
+  description    String?         @db.Text
+  date           DateTime
+  end_time       DateTime?
+  location       String?         @default("Online") @db.VarChar(255)
+  pricing_info   Float?          @default(0)
+  thumbnail_url  String?         @db.VarChar(255)
+  capacity       Int?            @default(0)
+  state          EventState?     @default(DRAFT)
+  user           User?           @relation("UserEvents", fields: [user_id], references: [user_id], onDelete: Cascade)
+  participants   Participant[]
+  categories     EventCategory[]
+  notifications  Notification[]
+  userOperations UserOperation[]
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+
+  @@index([user_id], name: "idx_event_user_id")
+  @@fulltext([name])
+  @@fulltext([description])
+  @@fulltext([location])
+  @@fulltext([location, description, name])
+}
+
+model EventCategory {
+  event_id    Int
+  category_id Int
+  event       Event?    @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  category    Category? @relation(fields: [category_id], references: [category_id])
+
+  @@id([event_id, category_id])
+  @@index([category_id], name: "idx_event_category_category_id")
+}
+
+model Category {
+  category_id Int             @id @default(autoincrement())
+  name        String          @unique @db.VarChar(50)
+  events      EventCategory[]
+
+  @@index([name], name: "idx_category_name")
+  @@fulltext([name])
+}
+
+model Participant {
+  user_id        Int
+  event_id       Int
+  rsvp_date      DateTime? @default(now())
+  payment_status Boolean?  @default(false)
+  user           User?     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  event          Event?    @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  updated_at     DateTime  @updatedAt
+
+  @@id([user_id, event_id])
+  @@index([user_id], name: "idx_participant_user_id")
+  @@index([event_id], name: "idx_participant_event_id")
+}
+
+model Notification {
+  notification_id   Int      @id @default(autoincrement())
+  user_id           Int
+  event_id          Int
+  notification_type String   @db.VarChar(50)
+  sent_at           DateTime @default(now())
+  user              User?    @relation(fields: [user_id], references: [user_id])
+  event             Event?   @relation(fields: [event_id], references: [event_id])
+
+  @@index([user_id], name: "idx_notification_user_id")
+  @@index([event_id], name: "idx_notification_event_id")
+}
+
+model UserOperation {
+  operation_id      Int           @id @default(autoincrement())
+  user_id           Int
+  event_id          Int?
+  operation_type    OperationType
+  operation_details Json?
+  created_at        DateTime      @default(now())
+  user              User          @relation(fields: [user_id], references: [user_id])
+  event             Event?        @relation(fields: [event_id], references: [event_id])
+
+  @@index([user_id], name: "idx_user_operation_user_id")
+  @@index([event_id], name: "idx_user_operation_event_id")
+}
+
+enum EventState {
+  PUBLISHED
+  DRAFT
+  CANCELLED
+}
+
+enum OperationType {
+  VIEW
+  CREATE
+  EDIT
+  DELETE
+  RSVP
+  CANCEL_RSVP
+  LOGIN
+  LOGOUT
+  UPDATE_PROFILE
+  CHANGE_PASSWORD
+  DELETE_ACCOUNT
+  PUBLISH
+  DRAFT
+  CANCEL
+  SEARCH
+  FILTER
+  MARK_NOTIFICATION_AS_READ
+  DELETE_NOTIFICATION
+}
