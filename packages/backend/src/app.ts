@@ -16,7 +16,7 @@ app.use(bodyParser.json());
 app.use(loggerMiddleware);
 
 // Mounting the consolidated routes
-app.use('/api', router);
+app.use('', router);
 
 app.use(errorMiddleware);
 
