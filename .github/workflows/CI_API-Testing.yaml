@@ -25,7 +25,8 @@ jobs:
           --health-retries=3
 
     env:
-      DATABASE_URL: "postgresql://root:root@localhost:5432/dev-EMS"
+      POSTGRES_PRISMA_URL: "postgresql://root:root@localhost:5432/dev-EMS"
+      POSTGRES_URL_NON_POOLING: "postgresql://root:root@localhost:5432/dev-EMS"
 
     steps:
       - name: Checkout code
