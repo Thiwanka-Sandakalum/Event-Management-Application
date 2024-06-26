@@ -1,0 +1,52 @@
+name: CI Pipeline for Backend Testing
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: dev-EMS
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    env:
+      DATABASE_URL: "mysql://root:root@localhost:3306/dev-EMS"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./packages/backend
+
+      - name: Set up Prisma
+        run: npx prisma generate
+        working-directory: ./packages/backend
+
+      - name: Run migrations
+        run: npx prisma migrate deploy
+        working-directory: ./packages/backend
+
+      - name: Run tests
+        run: npm test
+        working-directory: ./packages/backend
