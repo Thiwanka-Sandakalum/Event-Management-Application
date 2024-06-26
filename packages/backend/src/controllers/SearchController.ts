@@ -9,7 +9,7 @@ import { handlePrismaError } from '../utils/prismaErrorHandler';
 export class SearchController {
     static async searchEvents(
         req: Request<{}, {}, {}, SearchEventsRequest>,
-        res: Response<SearchEventsResponse>,
+        res: Response,
         next: NextFunction
     ) {
         try {

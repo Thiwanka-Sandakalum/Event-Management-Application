@@ -100,30 +100,42 @@ export class EventService {
      * @param keyword - The keyword to search for.
      * @returns A promise that resolves to an array of matching events.
      */
-    static async searchEvents(keyword?: string): Promise<Event[]> {
-        const events = await prisma.event.findMany({
-            where: {
-                OR: [
-                    {
-                        name: {
-                            search: keyword || '',
-                        },
-                    },
-                    {
-                        description: {
-                            search: keyword || '',
-                        },
-                    },
-                    {
-                        location: {
-                            search: keyword || '',
-                        },
-                    },
-                ],
-            },
-        });
+    static async searchEvents(keyword?: string) {
+
+        // postgresql
+        const events = await prisma.$queryRaw`
+        SELECT *
+        FROM "Event"
+        WHERE to_tsvector("name") @@ plainto_tsquery(${keyword})
+           OR to_tsvector("description") @@ plainto_tsquery(${keyword})
+           OR to_tsvector("location") @@ plainto_tsquery(${keyword});
+    `;
+
+        // const events = await prisma.event.findMany({
+        //     where: {
+        //         OR: [
+        //             {
+        //                 name: {
+        //                     search: keyword || '',
+        //                 },
+        //             },
+        //             {
+        //                 description: {
+        //                     search: keyword || '',
+        //                 },
+        //             },
+        //             {
+        //                 location: {
+        //                     search: keyword || '',
+        //                 },
+        //             },
+        //         ],
+        //     },
+        // });
+
         return events;
     }
+
 
     /**
      * Filters events based on optional parameters.
