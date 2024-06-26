@@ -6,8 +6,11 @@
     "test": "jest",
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev src/server.ts",
-    "lint": "eslint . --ext .ts"
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "lint": "eslint . --ext .ts",
+    "generate": "npx prisma generate",
+    "migrate": "npx prisma migrate dev",
+    "seed": "npx prisma migrate reset && npx prisma migrate dev && npx ts-node prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,29 +19,22 @@
   "dependencies": {
     "@prisma/client": "^5.15.1",
     "express": "^4.19.2",
+    "express-validator": "^7.1.0",
     "prisma": "^5.15.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.8",
+    "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^7.13.1",
     "@typescript-eslint/parser": "^7.13.1",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
     "nodemon": "^3.1.4",
+    "supertest": "^7.0.0",
     "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.2"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "roots": [
-      "<rootDir>/src"
-    ],
-    "modulePaths": [
-      "<rootDir>/src"
-    ]
   }
 }
