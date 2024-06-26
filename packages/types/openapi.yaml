@@ -4,23 +4,27 @@ info:
   description: API documentation for the Event Management Application
   version: 1.0.0
 servers:
-  - url: https://api.example.com/v1
-    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
 
 components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+  # securitySchemes:
+  #   BearerAuth:
+  #     type: http
+  #     scheme: bearer
+  #     bearerFormat: JWT
 
   schemas:
     User:
       type: object
+      required:
+        - username
+        - email
+        - password_hash
+
       properties:
         user_id:
           type: integer
-          readOnly: true
         username:
           type: string
         email:
@@ -47,70 +51,75 @@ components:
         created_at:
           type: string
           format: date-time
-          readOnly: true
         updated_at:
           type: string
           format: date-time
-          readOnly: true
 
     Event:
       type: object
+      required:
+        - user_id
+        - name
+        - date
+        - state
       properties:
         event_id:
           type: integer
-          readOnly: true
+
         user_id:
           type: integer
         name:
           type: string
         description:
+          nullable: true
           type: string
         date:
           type: string
           format: date
-        start_time:
-          type: string
-          format: time
         end_time:
+          nullable: true
           type: string
           format: time
         location:
+          nullable: true
           type: string
         pricing_info:
+          nullable: true
           type: number
           format: float
         thumbnail_url:
+          nullable: true
           type: string
           format: uri
         capacity:
+          nullable: true
           type: integer
         state:
           type: string
           enum: [PUBLISHED, DRAFT, CANCELLED]
+          nullable: true
         created_at:
           type: string
           format: date-time
-          readOnly: true
+
         updated_at:
           type: string
           format: date-time
-          readOnly: true
 
     Category:
       type: object
       properties:
         category_id:
           type: integer
-          readOnly: true
         name:
           type: string
 
     Participant:
       type: object
+      required:
+        - user_id
+        - event_id
       properties:
-        participant_id:
-          type: integer
-          readOnly: true
         user_id:
           type: integer
         event_id:
@@ -118,14 +127,15 @@ components:
         rsvp_date:
           type: string
           format: date-time
-          readOnly: true
+        payment_status:
+          type: boolean
+          nullable: true
 
     Notification:
       type: object
       properties:
         notification_id:
           type: integer
-          readOnly: true
         user_id:
           type: integer
         event_id:
@@ -135,33 +145,32 @@ components:
         sent_at:
           type: string
           format: date-time
-          readOnly: true
 
-security:
-  - BearerAuth: []
+    Feedback:
+      type: object
+      properties:
+        feedback_id:
+          type: integer
+        user_id:
+          type: integer
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+# security:
+#   - BearerAuth: []
 
 paths:
-  /users:
-    post:
-      summary: Register a new user
-      tags:
-        - Users
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/User"
-      responses:
-        "201":
-          description: User created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "400":
-          description: Invalid input
-
   /auth/login:
     post:
       summary: User login
@@ -191,6 +200,58 @@ paths:
                     type: string
         "401":
           description: Unauthorized
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      summary: User logout
+      tags:
+        - Authentication
+      responses:
+        "204":
+          description: Logout successful
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users:
+    post:
+      summary: Register a new user
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /users/{user_id}:
     get:
@@ -212,6 +273,16 @@ paths:
                 $ref: "#/components/schemas/User"
         "404":
           description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
     put:
       summary: Update user profile
@@ -238,8 +309,22 @@ paths:
                 $ref: "#/components/schemas/User"
         "400":
           description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
     delete:
       summary: Delete user account
@@ -256,12 +341,98 @@ paths:
           description: User account deleted successfully
         "404":
           description: User not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
-  /events:
+  /users/{user_id}/password:
+    put:
+      summary: Change user password
+      tags:
+        - Users
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Password updated successfully
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/{user_id}/events:
+    get:
+      summary: View my events
+      tags:
+        - Users
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of events created by the user retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+        "404":
+          description: Events not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
     post:
       summary: Create a new event
       tags:
-        - Events
+        - Users
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
       requestBody:
         required: true
         content:
@@ -277,27 +448,28 @@ paths:
                 $ref: "#/components/schemas/Event"
         "400":
           description: Invalid input
-
-    get:
-      summary: Get a list of events
-      tags:
-        - Events
-      responses:
-        "200":
-          description: List of events retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Event"
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
-  /events/{event_id}:
+  /users/{user_id}/events/{event_id}:
     get:
       summary: Get event details
       tags:
-        - Events
+        - Users
       parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
         - name: event_id
           in: path
           required: true
@@ -312,12 +484,27 @@ paths:
                 $ref: "#/components/schemas/Event"
         "404":
           description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
     put:
-      summary: Update event details
+      summary: Edit event
       tags:
-        - Events
+        - Users
       parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
         - name: event_id
           in: path
           required: true
@@ -338,14 +525,33 @@ paths:
                 $ref: "#/components/schemas/Event"
         "400":
           description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
     delete:
       summary: Delete event
       tags:
-        - Events
+        - Users
       parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
         - name: event_id
           in: path
           required: true
@@ -356,13 +562,28 @@ paths:
           description: Event deleted successfully
         "404":
           description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
-  /events/{event_id}/publish:
-    put:
-      summary: Publish event
+  /users/{user_id}/rsvps/:
+    get:
+      summary: View my RSVPs
       tags:
-        - Events
+        - Users
       parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
         - name: event_id
           in: path
           required: true
@@ -370,16 +591,37 @@ paths:
             type: integer
       responses:
         "200":
-          description: Event published successfully
+          description: List of events RSVP'd by the user retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
         "404":
-          description: Event not found
+          description: Events not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
-  /events/{event_id}/cancel:
-    put:
-      summary: Cancel event
+  /users/{user_id}/rsvps/{event_id}:
+    get:
+      summary: View my RSVP
       tags:
-        - Events
+        - Users
       parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
         - name: event_id
           in: path
           required: true
@@ -387,26 +629,36 @@ paths:
             type: integer
       responses:
         "200":
-          description: Event cancelled successfully
+          description: List of events RSVP'd by the user retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
         "404":
-          description: Event not found
-
-  /participants:
+          description: Events not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     post:
       summary: RSVP to an event
       tags:
-        - Participants
+        - Users
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                user_id:
-                  type: integer
-                event_id:
-                  type: integer
+              $ref: "#/components/schemas/Participant"
+
       responses:
         "201":
           description: RSVP successful
@@ -416,13 +668,27 @@ paths:
                 $ref: "#/components/schemas/Participant"
         "400":
           description: Invalid input
-
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     delete:
       summary: Cancel RSVP
       tags:
-        - Participants
+        - Users
       parameters:
-        - name: participant_id
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: event_id
           in: path
           required: true
           schema:
@@ -432,35 +698,418 @@ paths:
           description: RSVP cancelled successfully
         "404":
           description: Participant not found
-
-  /notifications:
-    get:
-      summary: Get notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: update payment status
       tags:
-        - Notifications
+        - Users
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_status:
+                  type: boolean
+      responses:
+        "204":
+          description: RSVP update payment successfully
+        "404":
+          description: Participant not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /events:
+    get:
+      summary: View events
+      tags:
+        - Events
       responses:
         "200":
-          description: Notifications retrieved successfully
+          description: List of events retrieved successfully
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Notification"
-
-  /notifications/{notification_id}:
-    delete:
-      summary: Delete notification
+                  $ref: "#/components/schemas/Event"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Events not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /events/search:
+    get:
+      summary: Search events
       tags:
-        - Notifications
+        - Events
       parameters:
-        - name: notification_id
+        - name: keyword
+          in: query
+          description: The keyword to search for in event names, descriptions, and locations
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of events matching the search criteria retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+        "404":
+          description: Events not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /events/filter:
+    get:
+      summary: Filter events
+      tags:
+        - Events
+      parameters:
+        - name: date
+          in: query
+          description: The date of the events to filter by
+          schema:
+            type: string
+            format: date
+        - name: location
+          in: query
+          description: The location of the events to filter by
+          schema:
+            type: string
+        - name: category
+          in: query
+          description: The categories of the events to filter by
+          schema:
+            type: array
+            items:
+              type: string
+        - name: page
+          in: query
+          description: The page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: The number of events to return per page
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: List of events matching the filter criteria retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+        "404":
+          description: Events not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /events/{event_id}:
+    get:
+      summary: View events
+      tags:
+        - Events
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Events not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /events/{event_id}/participants:
+    get:
+      summary: View RSVPs of event
+      tags:
+        - Events
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of events RSVP'd by the user retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+        "404":
+          description: Events not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /categories:
+    post:
+      summary: Add a new event category
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Category"
+      responses:
+        "201":
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /categories/{category_id}:
+    put:
+      summary: Update event category
+      tags:
+        - Admin
+      parameters:
+        - name: category_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Category"
+      responses:
+        "200":
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "404":
+          description: Category not found
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete event category
+      tags:
+        - Admin
+      parameters:
+        - name: category_id
           in: path
           required: true
           schema:
             type: integer
       responses:
         "204":
-          description: Notification deleted successfully
+          description: Category deleted successfully
         "404":
-          description: Notification not found
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/users:
+    get:
+      summary: View all users
+      tags:
+        - Admin
+      responses:
+        "200":
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/users/{user_id}:
+    delete:
+      summary: Ban a user
+      tags:
+        - Admin
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User banned successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /feedback:
+    post:
+      summary: Send feedback
+      tags:
+        - Feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Feedback"
+      responses:
+        "201":
+          description: Feedback sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feedback"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
